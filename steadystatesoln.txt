@@ -1,0 +1,37 @@
+Solve lambda+1/2 D ( d^2 rho(u))/( du^2)-nu rho(u) = 0:
+The general solution will be the sum of the complementary solution and particular solution.
+Find the complementary solution by solving 1/2 D ( d^2 rho(u))/( du^2)-nu rho(u)  =  0:
+Assume a solution will be proportional to e^(lambda u) for some constant lambda.
+Substitute rho(u)  =  e^(lambda u) into the differential equation:
+1/2 D ( d^2 )/( du^2)(e^(lambda u))-nu e^(lambda u)  =  0
+Substitute ( d^2 )/( du^2)(e^(lambda u))  =  lambda^2 e^(lambda u):
+1/2 D lambda^2 e^(lambda u)-nu e^(lambda u)  =  0
+Factor out e^(lambda u):
+((D lambda^2)/2-nu) e^(lambda u)  =  0
+Since e^(lambda u) !=0 for any finite lambda, the zeros must come from the polynomial:
+(D lambda^2)/2-nu  =  0
+Factor:
+1/2 (D lambda^2-2 nu)  =  0
+Solve for lambda:
+lambda = (sqrt(2) sqrt(nu))/sqrt(D) or lambda = -(sqrt(2) sqrt(nu))/sqrt(D)
+The root lambda  =  -(sqrt(2) sqrt(nu))/sqrt(D) gives rho_1(u)  =  c_1 e^(-(sqrt(2) sqrt(nu) u)/sqrt(D)) as a solution, where c_1 is an arbitrary constant.
+The root lambda  =  (sqrt(2) sqrt(nu))/sqrt(D) gives rho_2(u)  =  c_2 e^((sqrt(2) sqrt(nu) u)/sqrt(D)) as a solution, where c_2 is an arbitrary constant.
+The general solution is the sum of the above solutions:
+rho(u)  =  rho_1(u)+rho_2(u)  =  c_1/e^((sqrt(2) sqrt(nu) u)/sqrt(D))+c_2 e^((sqrt(2) sqrt(nu) u)/sqrt(D))
+Determine the particular solution to 1/2 D ( d^2 rho(u))/( du^2)-nu rho(u) = -lambda by the method of undetermined coefficients:
+The particular solution to 1/2 D ( d^2 rho(u))/( du^2)-nu rho(u)  =  -lambda is of the form:
+rho_p(u) = a_1
+Solve for the unknown constant a_1:
+Compute ( d^2 rho_p(u))/( du^2):
+( d^2 rho_p(u))/( du^2)  =  ( d^2 )/( du^2)(a_1)
+  =  0
+Substitute the particular solution rho_p(u) into the differential equation:
+1/2 D ( d^2 rho_p(u))/( du^2)-nu rho_p(u)  =  -lambda
+(D 0)/2-nu a_1  =  -lambda
+Solve the equation:
+a_1 = lambda/nu
+Substitute a_1 into rho_p(u)  =  a_1:
+rho_p(u)  =  lambda/nu
+The general solution is:
+Answer: |  
+ | rho(u)  =  rho_c(u)+rho_p(u)  =  lambda/nu+c_1/e^((sqrt(2) sqrt(nu) u)/sqrt(D))+c_2 e^((sqrt(2) sqrt(nu) u)/sqrt(D))
