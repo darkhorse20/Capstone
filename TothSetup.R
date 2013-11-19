@@ -1,7 +1,4 @@
 # Epsilon Intelligence order book simulation
-# library(msversion)
-# addpkg("VGAM", "0.8-7-r214")
-# library("VGAM")
 
 
 setwd("./")
@@ -17,45 +14,45 @@ msLag <- 1;
 
 
 # Initialize book with asymptotic depth of 5 shares
-initializeBook5 <- function()
+initializeBook5 <- function(book)
 {
   
   #   Price <<- -LL:LL
-  Price <<- round(seq(0,LL,0.00100000), digits=3)
-  n_L <<- LL/0.001
+  Price <- round(seq(0,LL,0.00100000), digits=3)
+  n_L <- LL/0.001
   cat('No of levels: ', n_L)
   # Book shape is set to equal long-term average from simulation
-  buySize <<- c(rep(5000,(n_L/2)-8),4000,3500,3000,2500,2000,1500,1000,500,rep(0,(n_L/2)+1))
-  sellSize <<- c(rep(0,(n_L/2)),0,500,1000,1500,2000,2500,3000,3500,4000,rep(5000,(n_L/2)-8))
-  book <<- data.frame(Price, buySize, sellSize ) 
-  eventLog <<- as.data.frame(matrix(0,nrow=numEvents,ncol=2))
+  buySize <- c(rep(5000,(n_L/2)-8),4000,3500,3000,2500,2000,1500,1000,500,rep(0,(n_L/2)+1))
+  sellSize <- c(rep(0,(n_L/2)),0,500,1000,1500,2000,2500,3000,3500,4000,rep(5000,(n_L/2)-8))
+  book <- data.frame(Price, buySize, sellSize ) 
+  eventLog <- as.data.frame(matrix(0,nrow=numEvents,ncol=2))
   colnames(eventLog)<<-c("Type","Price")
-  count <<- 0
-  eventType <<- c("LB","LS","CB","CS","MB","MS")
-  eventDescr <<- NA
+  count <- 0
+  eventType <- c("LB","LS","CB","CS","MB","MS")
+  eventDescr <- NA
 }
 
 
 #Various utility functions
-bestOffer <- function(){min(book$Price[book$sellSize>0])}
-bestBid <- function(){max(book$Price[book$buySize>0])}
-spread <- function(){bestOffer()-bestBid()}
-mid <- function(){(bestOffer()+bestBid())/2}
+bestOffer <- function(book){min(book$Price[book$sellSize>0])}
+bestBid <- function(book){max(book$Price[book$buySize>0])}
+spread <- function(book){bestOffer(book)-bestBid(book)}
+mid <- function(book){(bestOffer(book)+bestBid(book))/2}
 
 #Functions to find mid-market
-bidPosn<-function()length(book$buySize[book$Price<=bestBid()])
-askPosn<-function()length(book$sellSize[book$Price<=bestOffer()])
-midPosn<-function(){floor((bidPosn()+askPosn())/2)}
+bidPosn<-function(book)length(book$buySize[book$Price<=bestBid(book)])
+askPosn<-function(book)length(book$sellSize[book$Price<=bestOffer(book)])
+midPosn<-function(book){floor((bidPosn(book)+askPosn(book))/2)}
 
 #Display center of book
-go <- function(){book[(midPosn()-20):(midPosn()+20),]}
+go <- function(book){book[(midPosn(book)-20):(midPosn(book)+20),]}
 
 #Display book shape
-bookShape<-function(band){c(book$buySize[LL+1+(-band:0)],book$sellSize[LL+1+1:band])}
-dynamicBookShape<-function(band){c(book$buySize[(midPosn()-band):midPosn()],book$sellSize[midPosn()+1:band])}
+bookShape<-function(book, band){c(book$buySize[LL+1+(-band:0)],book$sellSize[LL+1+1:band])}
+dynamicBookShape<-function(book, band){c(book$buySize[(midPosn(book)-band):midPosn(book)],book$sellSize[midPosn(book)+1:band])}
 
-bookPlot<-function(band){
-  plot((-band:band),bookShape(band),
+bookPlot<-function(book, band){
+  plot((-band:band),bookShape(book, band),
        col="red",type="l",xlab="Price",ylab="Quantity")
 }
 
@@ -73,29 +70,30 @@ logging <- T
 calculateFracVolume <- function()
 {
   u_rv <- runif(1,zeta_g,1.0);
-  frac_g <<- 1 - exp(log(u_rv/zeta_g)/(zeta_g-1));
+  frac_g <- 1 - exp(log(u_rv/zeta_g)/(zeta_g-1));
 #   frac_g <<- 1 - exp(log(-u_rv)/zeta_g);
+  return(frac_g)
 }
 
 
 #Buy limit order
-limitBuyOrder <- function(price=NA){
+limitBuyOrder <- function(book, price=NA){
   if (is.na(price))
-  {prx <<- (bestOffer()-round(pick(L)*0.001,digits=3))}
+  {prx <<- (bestOffer(book)-round(pick(L)*0.001,digits=3))}
   else prx <<-price  
-  if(logging==T){eventLog[count,]<<- c("LB",prx)} 
+#   if(logging==T){eventLog[count,]<<- c("LB",prx)} 
   book$buySize[book$Price==prx]<<-book$buySize[book$Price==prx]+1} 
 
 #Sell limit order
-limitSellOrder <- function(price=NA){
+limitSellOrder <- function(book, price=NA){
   if (is.na(price))
-  {prx <<- (bestBid()+round(pick(L)*0.001,digits=3))}
+  {prx <<- (bestBid(book)+round(pick(L)*0.001,digits=3))}
   else prx <<-price  
-  if(logging==T){eventLog[count,] <<- c("LS",prx)}  
+#   if(logging==T){eventLog[count,] <<- c("LS",prx)}  
   book$sellSize[book$Price==prx]<<-book$sellSize[book$Price==prx]+1} 
 
 #Limit Order for Toth
-limitOrder <- function(price=NA, nr_ords) {
+limitOrder <- function(book, price=NA, nr_ords) {
 #    cat('Limit Orders: ', nr_ords, '\n')
 #   for(cnt in 1:nr_ords) {
 #     posn <- pick(2*L)
@@ -112,21 +110,22 @@ limitOrder <- function(price=NA, nr_ords) {
 #     }
 #   }
   
-  startBuy<-askPosn()
+  startBuy<-askPosn(book)
   m <- length(nr_ords)/2
-  startSell<- bidPosn()
+  startSell<- bidPosn(book)
   
   for(cnt in 1:m ){
       
     if(nr_ords[cnt] > 0) {
-      book$buySize[startBuy-cnt]<<-book$buySize[startBuy-cnt]+1
+      book$buySize[startBuy-cnt]<-book$buySize[startBuy-cnt]+1
     }
     
     if(nr_ords[m + cnt] > 0) {
-      book$sellSize[startSell+cnt]<<-book$sellSize[startSell+cnt]+1
+      book$sellSize[startSell+cnt]<-book$sellSize[startSell+cnt]+1
     }
       
-  }     
+  }    
+  
 #       book$buySize[startBuy-cnt]<<-book$buySize[startBuy-cnt]+nr_ords[cnt]
 #       book$sellSize[startSell+cnt]<<-book$sellSize[startSell+cnt]+nr_ords[m + cnt]
       
@@ -157,80 +156,68 @@ limitOrder <- function(price=NA, nr_ords) {
 }
 
 #Cancel buy order            
-cancelBuyOrder<-function(price=NA){
+cancelBuyOrder<-function(book, price=NA){
   q<-pick(nb) 
   tmp <- cumsum(rev(book$buySize))  #Cumulative buy size from 0
   posn <- length(tmp[tmp>=q]) #gives position in list where cumulative size >q
   prx <<- book$Price[posn] 
   if (!is.na(price)) {prx <<-price} 
-  if(logging==T){eventLog[count,]<<- c("CB",prx)} 
-  book$buySize[posn]<<-book$buySize[posn]-1}
+#   if(logging==T){eventLog[count,]<<- c("CB",prx)} 
+  book$buySize[posn]<-book$buySize[posn]-1}
 
 
 #Cancel sell order
-cancelSellOrder<-function(price=NA){
+cancelSellOrder<-function(book, price=NA){
   q<-pick(ns) 
   tmp <- cumsum(book$sellSize)  #Cumulative sell size from 0
   posn <- length(tmp[tmp<q])+1 
   prx <<- book$Price[posn] 
   if (!is.na(price)) {prx <<-price}  
-  if(logging==T){eventLog[count,]<<- c("CS",prx)} 
-  book$sellSize[posn]<<-book$sellSize[posn]-1}
+#   if(logging==T){eventLog[count,]<<- c("CS",prx)} 
+  book$sellSize[posn]<-book$sellSize[posn]-1}
 
-cancelOrder <- function(price=NA, nr_cxls) {
+cancelOrder <- function(book, price=NA, nr_cxls) {
 #   cat('Cxl Order\n');
   
   for(i in 1:nr_cxls) {
     c <- sample(1:2,1)
     switch(c,
-           cancelSellOrder(),
-           cancelBuyOrder())
+           cancelSellOrder(book),
+           cancelBuyOrder(book))
     
   }
-
-#   startBuy<-midPosn()-band-1
-#   m <- length(nr_cxls)/2
-#   startSell<-midPosn()+1
-#   
-#   for(cnt in 1:m ){
-#     
-#     book$buySize[startBuy+cnt]<<-book$buySize[startBuy+cnt]-nr_cxls[cnt]
-#     
-#     book$sellSize[startSell+cnt]<<-book$sellSize[startSell+cnt]-nr_cxls[m + cnt]
-#   }
-  
 }
 
 
 #Market buy order
-marketBuyOrder <- function(){
+marketBuyOrder <- function(book, curr_L){
   mbLag <<- 1;
   msLag <<- msLag+1;
-  prx <<- bestOffer() 
+  prx <<- bestOffer(book) 
 #   cat('In mkt sell, best offer: ', prx,'\n')
-  if(logging==T){eventLog[count,]<<- c("MB",prx)} 
-  calculateFracVolume();
-  volume <- ceiling(frac_g * book$sellSize[book$Price==prx]);
+#   if(logging==T){eventLog[count,]<<- c("MB",prx)} 
+#   frac <- calculateFracVolume();
+  volume <- ceiling(calculateFracVolume() * book$sellSize[book$Price==prx]);
    cat('MKT Buy Vol: ', volume,'Vol at best offer: ',book$sellSize[book$Price==prx], '\n')
-  book$sellSize[book$Price==prx]<<- book$sellSize[book$Price==prx]-volume;
+  book$sellSize[book$Price==prx]<- book$sellSize[book$Price==prx]-volume;
 #   cat('New Buy size: ', book$sellSize[book$Price==prx],'\n')
-  curr_L <<- curr_L - 1 
+  curr_L <- curr_L - 1 
   
 }
 
 #Market sell order
-marketSellOrder <- function(){
-  msLag <<- 1;
-  mbLag <<- mbLag+1;                      
-  prx <<- bestBid() 
+marketSellOrder <- function(book, curr_L){
+#   msLag <<- 1;
+#   mbLag <<- mbLag+1;                      
+#   prx <<- bestBid(book) 
 #   cat('In mkt sell, best bid: ', prx,'\n')
-  if(logging==T){eventLog[count,]<<- c("MS",prx)} 
-  calculateFracVolume();
-  volume <- ceiling(frac_g * book$buySize[book$Price==prx]);
+#   if(logging==T){eventLog[count,]<<- c("MS",prx)} 
+  
+  volume <- ceiling(calculateFracVolume() * book$buySize[book$Price==prx]);
   cat('MKT Sell Vol: ', volume,'Vol at best bid: ',book$buySize[book$Price==prx], '\n')
-  book$buySize[book$Price==prx]<<-book$buySize[book$Price==prx]-(volume);
+  book$buySize[book$Price==prx]<-book$buySize[book$Price==prx]-(volume);
 #   cat('New Buy size: ', book$buySize[book$Price==prx],'\n')
-  curr_L <<- curr_L - 1
+  curr_L <- curr_L - 1
   
 }
 
@@ -240,23 +227,22 @@ marketSellOrder <- function(){
 # }
 
 ## calculate the market buy/sell probability based on powerlaw distribution
-marketOrder <- function(){
+marketOrder <- function(book, curr_L, curr_b_s){
   
   if(curr_L <= 0) {
     u <- runif(1,0.0,1.0)
     
-    curr_L <<- round(exp(-log(u)/(alpha+1)))
-    curr_b_s <<- sample(1:2,1, replace = TRUE, c(0.5,0.5));
+    curr_L <- round(exp(-log(u)/(alpha+1)))
+    curr_b_s <- sample(1:2,1, replace = TRUE, c(0.5,0.5));
   }
   cat('Current L:', curr_L, '\n')
   
   switch(curr_b_s,
-         marketBuyOrder(),
-         marketSellOrder()
+         marketBuyOrder(book, curr_L),
+         marketSellOrder(book, curr_L)
          )
   
 }
-
 
 
 ##Agent order, he's always selling
@@ -268,7 +254,7 @@ newAgentOrder <- function() {
   }
   
   prx <<- bestBid() 
-  if(logging==T){eventLog[count,]<<- c("MS",prx)} 
+#   if(logging==T){eventLog[count,]<<- c("MS",prx)} 
   calculateFracVolume();
   volume <- frac_g * book$buySize[book$Price==prx];
   book$buySize[book$Price==prx]<<-round(book$buySize[book$Price==prx]-(volume));
@@ -312,16 +298,17 @@ generateEventZIModified <- function()
   
 }
 
-generateTothEvent <- function(iter)
+generateTothEvent <- function(book, curr_L, curr_b_s)
 {
-  nb <<- sum(book$buySize[book$Price>=(bestOffer()-round(L*0.001, digits=3))]); # Number of cancelable buy orders
-  ns <<- sum(book$sellSize[book$Price<=(bestBid()+round(L*0.001, digits=3))]); # Number of cancelable sell orders
+  nb <- sum(book$buySize[book$Price>=(bestOffer(book)-round(L*0.001, digits=3))]); # Number of cancelable buy orders
+  ns <- sum(book$sellSize[book$Price<=(bestBid(book)+round(L*0.001, digits=3))]); # Number of cancelable sell orders
   eventRate <<- nb*nu+ns*nu + mu +2*L*lamb_da;
   
   limOrds <- rpois(2*L, lambda = lamb_da)
 #   if(limOrds > 0) {
-    limitOrder(nr_ords=limOrds)  
+    limitOrder(book, nr_ords=limOrds)  
 #   }
+
   
   mktOrd <- rpois(1, lambda = mu)
   if(mktOrd >0) {
@@ -335,21 +322,21 @@ generateTothEvent <- function(iter)
         }
         switch (m,
                 newAgentOrder(),
-                marketOrder()
+                marketOrder(book, curr_L, curr_b_s)
                 );
         
       } else {
-        marketOrder()  
+        marketOrder(book, curr_L, curr_b_s)  
       }
       
     } else {
-      marketOrder()
+      marketOrder(book, curr_L, curr_b_s)
     }
 
   }
   
   cxlOrd <- rpois(1, lambda = nu*(nb+ns))
-  cancelOrder(nr_cxls = cxlOrd)
+  cancelOrder(book, nr_cxls = cxlOrd)
   
 }
 
