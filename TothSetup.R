@@ -4,7 +4,7 @@
 setwd("./")
 
 #Book setup
-L <- 100 #Set number of price levels to be included in iterations
+L <- 40 #Set number of price levels to be included in iterations
 
 # Generate initial book
 LL <- 1 #Total number of levels in buy and sell books
@@ -18,8 +18,8 @@ initializeBook5 <- function(book)
 {
   
   #   Price <- -LL:LL
-  Price <- round(seq(0,LL,0.00100000), digits=3)
-  n_L <- LL/0.001
+  Price <- round(seq(0,LL,0.0100000), digits=3)
+  n_L <- LL/0.01
   cat('No of levels: ', n_L)
   # Book shape is set to equal long-term average from simulation
   buySize <- c(rep(5000,(n_L/2)-8),4000,3500,3000,2500,2000,1500,1000,500,rep(0,(n_L/2)+1))
@@ -60,7 +60,7 @@ bookPlot<-function(book, band){
 pick <- function(m){sample(1:m,1)}
 
 pickToth <- function(m){sample(-m:m,1)}
-pickDecimal <-function(m){sample( c(seq(-m,-0.001,0.001), seq(0.001,m,0.001)) ,1)}
+pickDecimal <-function(m){sample( c(seq(-m,-0.01,0.01), seq(0.01,m,0.01)) ,1)}
 
 # Switch logging on
 logging <- T
@@ -79,7 +79,7 @@ calculateFracVolume <- function()
 #Buy limit order
 limitBuyOrder <- function(book, price=NA){
   if (is.na(price))
-  {prx <- (bestOffer(book)-round(pick(L)*0.001,digits=3))}
+  {prx <- (bestOffer(book)-round(pick(L)*0.01,digits=3))}
   else prx <-price  
   #   if(logging==T){eventLog[count,]<- c("LB",prx)} 
   book$buySize[book$Price==prx]<-book$buySize[book$Price==prx]+1} 
@@ -87,7 +87,7 @@ limitBuyOrder <- function(book, price=NA){
 #Sell limit order
 limitSellOrder <- function(book, price=NA){
   if (is.na(price))
-  {prx <- (bestBid(book)+round(pick(L)*0.001,digits=3))}
+  {prx <- (bestBid(book)+round(pick(L)*0.01,digits=3))}
   else prx <-price  
   #   if(logging==T){eventLog[count,] <- c("LS",prx)}  
   book$sellSize[book$Price==prx]<-book$sellSize[book$Price==prx]+1} 
@@ -256,8 +256,8 @@ generateEvent <- function()
 
 generateEventZIModified <- function()
 {
-  nb <- sum(book$buySize[book$Price>=(bestOffer()-round(L*0.001, digits=3))]); # Number of cancelable buy orders
-  ns <- sum(book$sellSize[book$Price<=(bestBid()+round(L*0.001, digits=3))]); # Number of cancelable sell orders
+  nb <- sum(book$buySize[book$Price>=(bestOffer()-round(L*0.01, digits=3))]); # Number of cancelable buy orders
+  ns <- sum(book$sellSize[book$Price<=(bestBid()+round(L*0.01, digits=3))]); # Number of cancelable sell orders
   eventRate <- nb*nu+ns*nu + mu +2*L*lamb_da;
   probEvent <- c(L*lamb_da,L*lamb_da,nb*nu,ns*nu,mu)/eventRate;
   m <- sample(1:5, 1, replace = TRUE, probEvent); #Choose event type
@@ -274,8 +274,8 @@ generateEventZIModified <- function()
 generateTothEvent <- function(book, curr_L, curr_b_s)
 {
   withAgent <- FALSE 
-  nb <- sum(book$buySize[book$Price>=(bestOffer(book)-round(L*0.001, digits=3))]); # Number of cancelable buy orders
-  ns <- sum(book$sellSize[book$Price<=(bestBid(book)+round(L*0.001, digits=3))]); # Number of cancelable sell orders
+  nb <- sum(book$buySize[book$Price>=(bestOffer(book)-round(L*0.01, digits=3))]); # Number of cancelable buy orders
+  ns <- sum(book$sellSize[book$Price<=(bestBid(book)+round(L*0.01, digits=3))]); # Number of cancelable sell orders
   eventRate <- nb*nu+ns*nu + mu +2*L*lamb_da;
   
   limOrds <- rpois(2*L, lambda = lamb_da)
