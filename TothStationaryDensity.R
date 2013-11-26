@@ -2,38 +2,42 @@ setwd("./")
 
 source('RvEstimators.R')
 source('TothSetup.R')
+runPar <- TRUE
 
 nu <- 0.0001; mu<- 0.1; lamb_da <- 0.5; gamma <- 0.8; 
 eventRate <- 1
 phi <- 0.05
-zeta_g <- 0.0;
+zeta_g <- 0.2;
 # frac_g <- 1.0;
-band <- 40
+band <- 300
 burnin <- 0
 
 
 L_vals <- c(1:20)
 alpha <- gamma +1
-nb <- 0
-ns <- 0
 agent_L <- 0
 agentDone <- FALSE
 withAgent <- FALSE
 # set.seed(9062013)
-set.seed(9)
-numSims <- 2
+#set.seed(9)
+numSims <- 8
+numCores <- 8
 
+
+numEvents <- 10000;
 bookState <- as.data.frame(matrix(0,nrow=2*band+1, ncol=1));
+aveBook <- as.data.frame(matrix(0,nrow=1001, ncol=3));
+allMidPrxs <- c(rep(0, numEvents))
 
 
 runBooksSimulation <- function(.) {
-
-  numEvents <- 500;
+  
+  
   # Generate initial book
   LL <- 1 #Total number of levels in buy and sell books
   
   #Book setup
-  L <- 40 #Set number of price levels to be included in iterations
+  L <- 100 #40Set number of price levels to be included in iterations
   
   #   Price <<- -LL:LL
   Price <- round(seq(0,LL,0.00100000), digits=3)
@@ -50,17 +54,22 @@ runBooksSimulation <- function(.) {
   fracArr <- c(rep(0, numEvents))
   curr_L <- 0
   curr_b_s <- 1
+  set.seed(round(runif(1,min=1, max=10000000)))
   
   for(count in 1:numEvents){
     #generateEvent()
-    generateTothEvent(book, curr_L, curr_b_s)
+    ret_values <- generateTothEvent(book, curr_L, curr_b_s)
+    book <- ret_values$Book
+    curr_L <- ret_values$CL
+    curr_b_s <- ret_values$BS
+    
     #generateEventZIModified();
     midPrxs[count] <- mid(book) 
-#     fracArr[count] <- frac_g;
+    #     fracArr[count] <- frac_g;
     
   }
   
-  return(book)
+  return(list(Book=book,MP=midPrxs))
   
 }
 
@@ -73,30 +82,54 @@ monteCarlo <- function(sims, cores=detectCores()){
     clusterExport(cl, list("generateTothEvent", "marketOrder", "bestOffer", "bestBid", "mid",
                            "askPosn", "bidPosn", "midPosn","limitOrder", "limitBuyOrder",
                            "limitSellOrder", "cancelOrder", "cancelBuyOrder", "cancelSellOrder",
-                           "pick", "pickToth", "L", "LL", "nu", "alpha", "nb","ns",
+                           "pick", "pickToth", "L", "LL", "nu", "alpha", 
                            "lamb_da", "zeta_g", "withAgent", "agentDone", "phi", "band",
                            "mu","marketBuyOrder", "marketSellOrder", "calculateFracVolume",
-                           "msLag","mbLag"))
+                           "msLag","mbLag", "numEvents"))
     runtime <- system.time({
-      books <- clusterApply(cl=cl, x=1:sims, fun=runBooksSimulation)
+      res <- clusterApply(cl=cl, x=1:sims, fun=runBooksSimulation)
     })[3]
     stopCluster(cl) # Don't forget to do this--I frequently do
     
     # mclapply() for everybody else
   } else {
     runtime <- system.time({
-      books <- mclapply(X=1:sims, FUN=runBooksSimulation, mc.cores=cores)
+      res <- mclapply(X=1:sims, FUN=runBooksSimulation, mc.cores=cores)
     })[3]
   }
-  return(books)
+  return(res)
 }
 
-#runBooksSimulation()
+if(runPar == FALSE) {
+  mc_res <- runBooksSimulation()
+  plot(mc_res$MP)
+  
+} else {
+  
+  mc_res <- monteCarlo(numSims, numCores)
+  
+  for(k in 1:length(mc_res)) {
+   bookState <<- bookState + dynamicBookShape(mc_res[[k]]$Book, band)
+    aveBook <- aveBook + mc_res[[k]]$Book
+    allMidPrxs <- allMidPrxs + mc_res[[k]]$MP
+    
+    
+  }
+  aveBookShape <- bookState[,1]/numSims;
+  aveBook <- aveBook/numSims
+  
+  plot(aveBookShape, col="red",type="l",xlab="Price",ylab="Quantity", main="Average Book Shape")
+  #plot(checkBook$Price[(midPosn(checkBook)-band):(midPosn(checkBook)+band)],c( checkBook$buySize[(midPosn(checkBook)-band):midPosn(checkBook)], checkBook$sellSize[(midPosn(checkBook)+1):(midPosn(checkBook)+band )]), col="red",type="l",xlab="Price",ylab="Quantity", main="Steady State Book Shape")
+  aveMidPrxs <-  allMidPrxs/numSims
+  
+  plot(aveMidPrxs)
+  
+}
 
- allbooks <- monteCarlo(4, cores=4)
 
-#   bookState[,1] <- bookState[,1] + dynamicBookShape(band)
-#   cat('Done with simulation: ',n,'\n')
+
+
+cat('Done with simulations: ',numSims,'\n')
 
 # tradeLog <- eventLog[(eventLog$Type=="MB")|(eventLog$Type=="MS"),]
 # tradeSigns <- ifelse(tradeLog$Type=="MB",+1,-1);
@@ -113,20 +146,39 @@ monteCarlo <- function(sims, cores=detectCores()){
 #   
 # }
 
-#plot(fracArr)
-# aveBookShape <- bookState[,1]/numSims;
-# plot(aveBookShape, col="red",type="l",xlab="Price",ylab="Quantity", main="Average Book Shape")
-# plot(book$Price[(midPosn()-band):(midPosn()+band)],c( book$buySize[(midPosn()-band):midPosn()], book$sellSize[(midPosn()+1):(midPosn()+band )]), col="red",type="l",xlab="Price",ylab="Quantity", main="Steady State Book Shape")
-
 
 ########################################################################################
 # End of time series generation
 ########################################################################################
 
-#rv <- ZHOU(midPrxs, 5)
+rv <- ZHOU(aveMidPrxs, 5)
 # rv <-TSRV(midPrxs, 1)
 # 
-# cat('Realized Vol: ', rv)
+ cat('Realized Vol: ', rv)
 # 
-# u_star <- sqrt(rv/(2*nu))
-# cat('U_star is :', u_star)
+ u_star <- sqrt(rv/(2*nu))
+ cat('U_star is :', u_star)
+
+########################################
+# Plot book density comparison
+########################################
+u_values <- seq(0.0,1.0,0.01)
+rho_inf <- lamb_da/nu
+
+
+getEmpBookDensityRatio <- function(indx) {
+  return(aveBookShape[band - indx*100]/rho_inf)
+}
+
+getAnalyticBookDensityRatio <- function(indx) {
+  return( 1 - exp(indx/u_star))
+}
+
+plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatio), type="l", col="blue")
+par(new = 'T')
+plot(u_values, sapply(u_values,FUN=getAnalyticBookDensityRatio, type="p", col="red"))
+
+
+
+
+
