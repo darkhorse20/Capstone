@@ -20,28 +20,26 @@ agentDone <- FALSE
 withAgent <- FALSE
 # set.seed(9062013)
 #set.seed(9)
-numSims <- 8
-numCores <- 8
+numSims <- 16
+numCores <- 16
+# Generate initial book
+LL <- 10 #Total number of levels in buy and sell books
 
+#Book setup
+L <- 40 #40Set number of price levels to be included in iterations
+scale <- 0.01
 
-numEvents <- 10000;
+numEvents <- 5000;
 bookState <- as.data.frame(matrix(0,nrow=2*band+1, ncol=1));
-aveBook <- as.data.frame(matrix(0,nrow=1001, ncol=3));
+aveBook <- as.data.frame(matrix(0,nrow=(round(LL/scale) + 1), ncol=3));
 allMidPrxs <- c(rep(0, numEvents))
 
 
 runBooksSimulation <- function(.) {
   
-  
-  # Generate initial book
-  LL <- 1 #Total number of levels in buy and sell books
-  
-  #Book setup
-  L <- 100 #40Set number of price levels to be included in iterations
-  
   #   Price <<- -LL:LL
-  Price <- round(seq(0,LL,0.00100000), digits=3)
-  n_L <- LL/0.001
+  Price <- round(seq(0,LL,scale), digits=3)
+  n_L <- LL/scale
   cat('No of levels: ', n_L)
   # Book shape is set to equal long-term average from simulation
   buySize <- c(rep(5000,(n_L/2)-8),4000,3500,3000,2500,2000,1500,1000,500,rep(0,(n_L/2)+1))
@@ -162,7 +160,7 @@ rv <- ZHOU(aveMidPrxs, 5)
 ########################################
 # Plot book density comparison
 ########################################
-u_values <- seq(0.0,1.0,0.01)
+u_values <- seq(0.0,3.0,0.1)
 rho_inf <- lamb_da/nu
 
 
@@ -171,14 +169,16 @@ getEmpBookDensityRatio <- function(indx) {
 }
 
 getAnalyticBookDensityRatio <- function(indx) {
-  return( 1 - exp(indx/u_star))
+  return( 1 - exp(-(indx/u_star)))
 }
 
-plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatio), type="l", col="blue")
+getEmpBookDensityRatioSellSide <- function(indx) {
+  return(aveBookShape[band + indx*100]/rho_inf)
+}
+
+plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatio), type="l", col="blue", main="Book Density Comparison")
 par(new = 'T')
-plot(u_values, sapply(u_values,FUN=getAnalyticBookDensityRatio, type="p", col="red"))
-
-
-
-
+plot(u_values, sapply(u_values,FUN=getAnalyticBookDensityRatio), type="p", col="red", main="Book Density Comparison")
+par(new = 'T')
+plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatioSellSide), type="l", col="green", main="Book Density Comparison")
 
