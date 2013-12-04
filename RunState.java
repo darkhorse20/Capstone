@@ -1,5 +1,8 @@
 package com.mfe.baruch.capstone;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.math3.distribution.BinomialDistribution;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
@@ -13,9 +16,11 @@ public class RunState {
 	private PoissonDistribution limPois = new PoissonDistribution(0.5);
 	private UniformRealDistribution fracUnif;
 	private UniformRealDistribution bsUnif = new UniformRealDistribution();
+	private UniformRealDistribution mktbsUnif = new UniformRealDistribution();
 	private BinomialDistribution cxlBS;
 	private BinomialDistribution mktBS;
 	private Parameters runParams;
+	private List<Double> midPrxs;
 	
 	public RunState(Book book, Parameters params) {
 		this.currL = 0;
@@ -25,6 +30,8 @@ public class RunState {
 		cxlBS = new BinomialDistribution(1, 0.5);
 		mktBS = new BinomialDistribution(1, 0.5);
 		fracUnif = new UniformRealDistribution(params.getZetaG(),1.0);
+		this.midPrxs  = new ArrayList<Double>(params.getNumEvents());
+		
 	}
 
 
@@ -51,6 +58,7 @@ public class RunState {
     public PoissonDistribution getCxlPois() {
         return cxlPois;
     }
+    
 
 
     public PoissonDistribution getLimPois() {
@@ -136,6 +144,26 @@ public class RunState {
     public void setBsUnif(UniformRealDistribution bsUnif) {
         this.bsUnif = bsUnif;
     }
+
+
+	public List<Double> getMidPrxs() {
+		return midPrxs;
+	}
+
+
+	public void setMidPrxs(List<Double> midPrxs) {
+		this.midPrxs = midPrxs;
+	}
+
+
+	public UniformRealDistribution getMktbsUnif() {
+		return mktbsUnif;
+	}
+
+
+	public void setMktbsUnif(UniformRealDistribution mktbsUnif) {
+		this.mktbsUnif = mktbsUnif;
+	}
 	
 	
 }
