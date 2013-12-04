@@ -26,7 +26,7 @@ public class Book {
 		}
 
 		for(int i=0; i<params.getL(); i++) {
-			buys.add(mid -params.getL() + i, 5000 - i*params.getSizeIncr());
+			buys.add(mid -params.getL() + i, 5000 - (i+1)*params.getSizeIncr());
 		}
 
 		for(int i=mid; i<nL+1; i++) {
@@ -40,13 +40,13 @@ public class Book {
 		}
 
 		for(int i=0; i<params.getL(); i++) {
-			sells.add(mid + i, i*params.getSizeIncr());
+			sells.add(mid + i, (i+1)*params.getSizeIncr());
 		}
 
 		for(int i=mid+params.getL(); i<nL+1; i++) {
 			sells.add(i, 5000);
 		}
-		System.out.println("Book set up");
+		//System.out.println("Book set up");
 
 	}
 	
@@ -56,6 +56,18 @@ public class Book {
 			attrib.add(i, i*params.getScale());
 		}
 
+	}
+	
+	public List dynamicBookShape(int band) {
+		List bookShape = new ArrayList<Integer>(2*band +1);
+		int midP = midPosn();
+		int buyStart = midP - band;
+		int sellStart = midP;
+		for(int i=0; i < 2*band; i++) {
+			if(i<band) bookShape.add(i,this.buys.get(buyStart+i));
+			else bookShape.add(i, this.sells.get(buyStart + i));
+		}
+		return bookShape;
 	}
 	
 	public int askPosn() {
@@ -77,7 +89,7 @@ public class Book {
 	}
 	
 	public int midPosn() {
-		return (askPosn() + midPosn())/2;
+		return (askPosn() + bidPosn())/2;
 	}
 	
 	public double bestOffer() {
@@ -105,7 +117,7 @@ public class Book {
 		int ns = 0;
 		int start = bidPosn();
 		for(int i=0 ; i < params.getL(); i++) {
-			ns += buys.get(start + i);
+			ns += sells.get(start + i);
 		}
 		return ns;
 	}
