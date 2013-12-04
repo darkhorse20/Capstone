@@ -17,21 +17,28 @@ public class TothSimulator {
 
     public List runSimulations() {
         List<Book> booksList = new ArrayList<Book>();
+        List<Double> aveMidPrxs = new ArrayList<Double>(this.runPars.getNumEvents());
         
         for (int i = 0; i < runPars.getNumSims(); i++) {
+        	System.out.println("Running simulation: " + i);
+        	
             Book book = new Book(runPars);
 
             RunState state = new RunState(book, this.runPars);
 
             for (int j = 0; j < runPars.getNumEvents(); j++) {
-                System.out.println("Running simulation: " + j);
+                //System.out.println("Time step: " + j);
                 generateTothEvent(state);
+                state.getMidPrxs().add(state.getBook().mid());
                 
             }
             booksList.add(book);
-            Utils.writeBook(state.getBook(), runPars.getOutputFilePath() + i + ".csv");
+            //Utils.writeBook(state.getBook(), runPars.getOutputFilePath() + i + ".csv");
+            //Utils.write(state.getMidPrxs(), runPars.getOutputFilePath() + "MidPrxs" + i + ".csv");
+            Utils.aggregateListsDouble(aveMidPrxs, state.getMidPrxs());
             
         }
+        Utils.write(aveMidPrxs, runPars.getOutputFilePath() + "AveMidPrxs.csv");
         return booksList;
     }
 
@@ -54,8 +61,8 @@ public class TothSimulator {
     }
 
     private int[] getLimitOrders(RunState state) {
-        int nrLimOrds = 0;
-        int[] samples = state.getLimPois().sample(state.getRunParams().getL());
+        
+        int[] samples = state.getLimPois().sample(2*state.getRunParams().getL());
         return samples;
     }
 
@@ -81,12 +88,12 @@ public class TothSimulator {
 
         for (int i = 0; i < m; i++) {
             if (nrOrds[i] > 0) {
-                state.getBook().getBuys().set(startBuy - i - 1, state.getBook().getBuys().get(startBuy - i - 1) + 1);
+                state.getBook().getBuys().set(startBuy - i , state.getBook().getBuys().get(startBuy - i ) + 1);
             }
-
+          
             if (nrOrds[m + i ] > 0) {
                 state.getBook().getSells()
-                        .set(startSell + i + 1, state.getBook().getSells().get(startSell + i + 1) + 1);
+                        .set(startSell + i, state.getBook().getSells().get(startSell + i) + 1);
             }
 
         }
@@ -111,7 +118,7 @@ public class TothSimulator {
     private void cancelBuyOrder(RunState state) {
         UniformIntegerDistribution uid = new UniformIntegerDistribution(1, state.getBook().getNrBuys());
         int q = uid.sample();
-        int b = state.getBook().bidPosn();
+        int b = state.getBook().askPosn();
         int size = 0;
         for(int i=0; i<state.getRunParams().getL(); i++) {
             size += state.getBook().getBuys().get(b - i);
@@ -125,9 +132,9 @@ public class TothSimulator {
     }
 
     private void cancelSellOrder(RunState state) {
-        UniformIntegerDistribution uid = new UniformIntegerDistribution(1, state.getBook().getNrBuys());
+        UniformIntegerDistribution uid = new UniformIntegerDistribution(1, state.getBook().getNrSells());
         int q = uid.sample();
-        int b = state.getBook().askPosn();
+        int b = state.getBook().bidPosn();
         int size = 0;
         for(int i=0; i<state.getRunParams().getL(); i++) {
             size += state.getBook().getSells().get(b + i);
@@ -142,12 +149,19 @@ public class TothSimulator {
 
     private void marketOrder(RunState state) {
         if(state.getCurrL() <= 0) {
-            if(state.getMktBS().sample() ==0) {
-                marketBuyOrder(state);
-            } else {
-                marketSellOrder(state);
-            }
+        	double rv = state.getMktbsUnif().sample();
+        	state.setCurrL((int)Math.round( Math.exp( -Math.log(rv)/(state.getRunParams().getAlpha()))) );
+        	state.setCurrBS(state.getMktBS().sample());
         }
+        
+        if(state.getCurrBS() ==0) {
+            marketBuyOrder(state);
+            
+        } else {
+            marketSellOrder(state);
+
+        }
+        state.setCurrL(state.getCurrL()-1);
     }
 
     private void marketBuyOrder(RunState state) {
