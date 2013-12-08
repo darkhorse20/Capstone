@@ -4,123 +4,184 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Book {
-	private List<Double> prices;
-	private List<Integer> sells;
-	private List<Integer> buys;
-	private int nL;
-	private Parameters params;
-	
-	@SuppressWarnings("unchecked")
-	public Book(Parameters params) {
-		this.nL = (int) Math.round(params.getLL()/params.getScale());
-		this.params = params;
-		
-		prices = new ArrayList(nL+1);
-		setBookPrices(prices, params);
+    private List<Double> prices;
+    private List<Integer> sells;
+    private List<Integer> buys;
+    private int nL;
+    private Parameters params;
+    
+    @SuppressWarnings("unchecked")
+    public Book(Parameters params) {
+        this.nL = (int) Math.round(params.getLL()/params.getScale());
+        this.params = params;
+        
+        prices = new ArrayList(nL+1);
+        setBookPrices(prices, params);
 
-		buys = new ArrayList(nL+1);
-		
-		int mid = nL/2;
-		for(int i=0; i<mid-params.getL(); i++) {
-			buys.add(i, 5000);
-		}
+        buys = new ArrayList(nL+1);
+        
+        int mid = nL/2;
+        for(int i=0; i<mid-params.getL(); i++) {
+            buys.add(i, 5000);
+        }
 
-		for(int i=0; i<params.getL(); i++) {
-			buys.add(mid -params.getL() + i, 5000 - (i+1)*params.getSizeIncr());
-		}
+        for(int i=0; i<params.getL(); i++) {
+            buys.add(mid -params.getL() + i, 5000 - (i+1)*params.getSizeIncr());
+        }
 
-		for(int i=mid; i<nL+1; i++) {
-			buys.add(i, 0);
-		}
+        for(int i=mid; i<nL+1; i++) {
+            buys.add(i, 0);
+        }
 
-		sells = new ArrayList(nL+1);
-		
-		for(int i=0; i<mid; i++) {
-			sells.add(i, 0);
-		}
+        sells = new ArrayList(nL+1);
+        
+        for(int i=0; i<mid; i++) {
+            sells.add(i, 0);
+        }
 
-		for(int i=0; i<params.getL(); i++) {
-			sells.add(mid + i, (i+1)*params.getSizeIncr());
-		}
+        for(int i=0; i<params.getL(); i++) {
+            sells.add(mid + i, (i+1)*params.getSizeIncr());
+        }
 
-		for(int i=mid+params.getL(); i<nL+1; i++) {
-			sells.add(i, 5000);
-		}
-		//System.out.println("Book set up");
+        for(int i=mid+params.getL(); i<nL+1; i++) {
+            sells.add(i, 5000);
+        }
+        //System.out.println("Book set up");
 
-	}
-	
-	private void setBookPrices(List attrib, Parameters params) {
-		
-		for(int i=0; i<this.nL +1; i++) {
-			attrib.add(i, i*params.getScale());
-		}
+    }
+    
+    private void setBookPrices(List attrib, Parameters params) {
+        
+        for(int i=0; i<this.nL +1; i++) {
+            attrib.add(i, i*params.getScale());
+        }
 
-	}
-	
-	public List dynamicBookShape(int band) {
-		List bookShape = new ArrayList<Integer>(2*band +1);
-		int midP = midPosn();
-		int buyStart = midP - band;
-		int sellStart = midP;
-		for(int i=0; i < 2*band; i++) {
-			if(i<band) bookShape.add(i,this.buys.get(buyStart+i));
-			else bookShape.add(i, this.sells.get(buyStart + i));
-		}
-		return bookShape;
-	}
-	
-	public int askPosn() {
-		for(int i=0; i < nL+1; i++) {
-			if( sells.get(i) > 0) {
-				return i;
-			}
-		}
-		return 0;
-	}
+    }
+    
+    public List dynamicBookShape(int band) {
+        List bookShape = new ArrayList<Integer>(2*band +1);
+        int midP = midPosn();
+        int buyStart = midP - band;
+        int sellStart = midP;
+        //If the mid prices is too high or too low, reject.
+        if(buyStart < 0 || (sellStart +band) > nL) {
+            return null;
+        }
+        
+        for(int i=0; i < 2*band; i++) {
+            if(i<band) {
+                bookShape.add(i,this.buys.get(buyStart+i));
+            } else {
+                if((buyStart + i) > this.nL) {
+                    bookShape.add(i,5000);
+                } else {
+                    bookShape.add(i, this.sells.get(buyStart + i));    
+                }
+                
+            }
+            
+        }
+        return bookShape;
+    }
+    
+    public int askPosn() {
+        for(int i=0; i < nL+1; i++) {
+            if( sells.get(i) > 0) {
+                return i;
+            }
+        }
+        return 0;
+   
+/*        if(sells.get(nL/2) == 0) {
+            for(int i=nL/2+1; i<nL; i++) {
+                if( sells.get(i) > 0) {
+                    return i;
+                }
+            }
+        } else {
+            for(int i=nL/2-1; i>0; i--) {
+                if( sells.get(i) == 0) {
+                    return (i+1);
+                }
+            }
+        }
+        return 0;*/
+     }
 
-	public int bidPosn() {
-		for(int i=nL-1; i >= 0; i--) {
-			if( buys.get(i) > 0) {
-				return i;
-			}
-		}
-		return 0;
-	}
-	
-	public int midPosn() {
-		return (askPosn() + bidPosn())/2;
-	}
-	
-	public double bestOffer() {
-		return prices.get(askPosn());
-	}
-	
-	public double bestBid() {
-		return prices.get(bidPosn());
-	}
-	
-	public double mid() {
-		return (bestOffer() + bestBid())/2;
-	}
-	
-	public int getNrBuys() {
-		int nb = 0;
-		int start = askPosn() - params.getL();
-		for(int i=0 ; i < params.getL(); i++) {
-			nb += buys.get(start + i);
-		}
-		return nb;
-	} 
-	
-	public int getNrSells() {
-		int ns = 0;
-		int start = bidPosn();
-		for(int i=0 ; i < params.getL(); i++) {
-			ns += sells.get(start + i);
-		}
-		return ns;
-	}
+    public int bidPosn() {
+        for(int i=nL-1; i >= 0; i--) {
+            if( buys.get(i) > 0) {
+                return i;
+            }
+        }
+        return 0;
+        
+/*        if(buys.get(nL/2) == 0) {
+            for(int i=nL/2-1; i>0; i--) {
+                if( buys.get(i) > 0) {
+                    return i;
+                }
+            }
+        } else {
+            for(int i=nL/2+1; i<nL; i++) {
+                if( buys.get(i) == 0) {
+                    return (i-1);
+                }
+            }
+        }
+        return 0;*/
+    }
+    
+    public int midPosn() {
+        return (askPosn() + bidPosn())/2;
+    }
+    
+    public double bestOffer() {
+        return prices.get(askPosn());
+    }
+    
+    public double bestBid() {
+        return prices.get(bidPosn());
+    }
+    
+    public double mid() {
+        return (bestOffer() + bestBid())/2;
+    }
+    
+    public int getNrBuys() {
+        int nb = 0;
+        int start = askPosn() - params.getL();
+        int end = params.getL();
+       
+        for(int i=0 ; i < end; i++) {
+            if(!((start + i ) <  0)) {
+                if((start + i )<=  this.nL) {
+                    nb += buys.get(start + i);
+                    
+                } else {
+                    return nb;
+                    
+                }
+                
+            }
+            
+        }
+        return nb;
+    } 
+    
+    public int getNrSells() {
+        int ns = 0;
+        int start = bidPosn();
+        for(int i=0 ; i < params.getL(); i++) {
+            if((start + i) <=  this.nL) {
+                ns += sells.get(start + i);    
+            } else {
+                return ns;
+            }
+            
+        }
+        return ns;
+    }
 
     public List<Double> getPrices() {
         return prices;
@@ -161,7 +222,7 @@ public class Book {
     public void setParams(Parameters params) {
         this.params = params;
     }
-	
-	
-	
+    
+    
+    
 }
