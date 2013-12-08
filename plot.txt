@@ -1,0 +1,20 @@
+Book Density Comparison 
+Book Density ComparisonBook Density ComparisonBook Density ComparisonBook Density ComparisonBook Density ComparisonBook Density ComparisonBook Density ComparisonBook Density ComparisonBook Density Comparison
+
+0.00.51.01.50.00.20.40.60.81.0rho/rho_inf
+ll ll l l l l l l l l l l l l l l l l l l l l l l lllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll 
+0.00.51.01.50.00.20.40.60.81.0rho/rho_inf0.00.51.01.50.00.20.40.60.81.0rho/rho_inf
+l l l l l l l l l l l l l l l l l l l llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll 
+0.00.51.01.50.00.20.40.60.81.0rho/rho_inf0.0 0.5 1.0 1.5 
+0.0 
+0.2 
+0.4 
+0.6 
+0.8 
+1.0 
+rho/rho_inf 
+u_v
+u_vu_vu_vu_vu_values 
+aluesaluesaluesaluesalues 
+
+
