@@ -10,6 +10,10 @@ public class Book {
     private int nL;
     private Parameters params;
     
+    //State variables
+    private int askPosn=0;
+    private int bidPosn =0;
+    
     @SuppressWarnings("unchecked")
     public Book(Parameters params) {
         this.nL = (int) Math.round(params.getLL()/params.getScale());
@@ -46,7 +50,11 @@ public class Book {
         for(int i=mid+params.getL(); i<nL+1; i++) {
             sells.add(i, 5000);
         }
-        //System.out.println("Book set up");
+        
+        askPosn = askPosn();
+        bidPosn = bidPosn();
+        
+//        System.out.println("Book set up, current Bid: " + bidPosn + ", current Ask: " + askPosn + "\n");
 
     }
     
@@ -62,22 +70,24 @@ public class Book {
         List bookShape = new ArrayList<Integer>(2*band +1);
         int midP = midPosn();
         int buyStart = midP - band;
-        int sellStart = midP;
+        //int sellStart = midP;
         //If the mid prices is too high or too low, reject.
-        if(buyStart < 0 || (sellStart +band) > nL) {
+
+        if(buyStart < 0 || (buyStart +band) > nL) {
+            System.out.println("Edge case, mid posn is: " + midP);
             return null;
+            
         }
         
         for(int i=0; i < 2*band; i++) {
-            if(i<band) {
+            if(i<=band) {
                 bookShape.add(i,this.buys.get(buyStart+i));
             } else {
-                if((buyStart + i) > this.nL) {
-                    bookShape.add(i,5000);
-                } else {
+//                if((buyStart + i) > this.nL) {
+//                    bookShape.add(i,5000);
+//                } else {
                     bookShape.add(i, this.sells.get(buyStart + i));    
-                }
-                
+//                }
             }
             
         }
@@ -85,10 +95,16 @@ public class Book {
     }
     
     public int askPosn() {
-        for(int i=0; i < nL+1; i++) {
-            if( sells.get(i) > 0) {
-                return i;
+        
+        if(this.askPosn <=0) {
+            for(int i=0; i < nL+1; i++) {
+                if( sells.get(i) > 0) {
+                    return i;
+                }
             }
+            
+        } else {
+            return askPosn;
         }
         return 0;
    
@@ -109,10 +125,15 @@ public class Book {
      }
 
     public int bidPosn() {
-        for(int i=nL-1; i >= 0; i--) {
-            if( buys.get(i) > 0) {
-                return i;
+        if(this.bidPosn <= 0) {
+            for(int i=nL-1; i >= 0; i--) {
+                if( buys.get(i) > 0) {
+                    return i;
+                }
             }
+            
+        } else {
+               return bidPosn;
         }
         return 0;
         
@@ -150,7 +171,7 @@ public class Book {
     
     public int getNrBuys() {
         int nb = 0;
-        int start = askPosn() - params.getL();
+        int start = askPosn() - params.getL()-1;
         int end = params.getL();
        
         for(int i=0 ; i < end; i++) {
@@ -171,7 +192,7 @@ public class Book {
     
     public int getNrSells() {
         int ns = 0;
-        int start = bidPosn();
+        int start = bidPosn()+1;
         for(int i=0 ; i < params.getL(); i++) {
             if((start + i) <=  this.nL) {
                 ns += sells.get(start + i);    
@@ -221,6 +242,22 @@ public class Book {
 
     public void setParams(Parameters params) {
         this.params = params;
+    }
+
+    public int getAskPosn() {
+        return askPosn;
+    }
+
+    public void setAskPosn(int askPosn) {
+        this.askPosn = askPosn;
+    }
+
+    public int getBidPosn() {
+        return bidPosn;
+    }
+
+    public void setBidPosn(int bidPosn) {
+        this.bidPosn = bidPosn;
     }
     
     
