@@ -2,11 +2,11 @@ package com.mfe.baruch.capstone;
 
 public class Parameters {
     
-    private int threads = 7;
+    private int threads = 6;
     private int band = 150;
     private int numSims = 20000;
     private int numEvents = 10000;
-    private int LL = 1;
+    private int LL = 2;
     private double scale = 0.001;
     private int L = 100;
     private int sizeIncr = 50;
@@ -16,6 +16,13 @@ public class Parameters {
     //private String outputFilePath = "C:/aya/Documents/MFE/Baruch/Capstone/TothBook";
     private String outputFilePath = "C:\\MSDE\\anuroopy\\Capstone/TothBook";
     
+    public Parameters(int ns, int ne, int nth, String bp) {
+        this.numSims = ns;
+        this.numEvents = ne;
+        this.outputFilePath = bp;
+        this.threads = nth;
+        
+    }
     
     public double getNu() {
         return nu;
