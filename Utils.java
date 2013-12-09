@@ -58,7 +58,7 @@ public class Utils {
             FileWriter fw = new FileWriter(f); 
             for(int i=0; i < books.size(); i++) {
                    for(int j=0; j< books.get(i).size(); j++) {
-                       fw.write(books.get(i)+ ",");       
+                       fw.write(books.get(i).get(j)+ ",");       
                    }
                    fw.write("\n");
                 
@@ -70,6 +70,7 @@ public class Utils {
         }
         
     }
+    
     public static void aggregateLists(List<Integer> to, List<Integer> from) {
         if(from == null) {
             return;
