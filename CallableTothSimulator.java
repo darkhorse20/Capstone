@@ -80,14 +80,17 @@ public class CallableTothSimulator implements Callable<RunState> {
     }
 
     private void limitOrder(RunState state, int[] nrOrds) {
-        int startBuy = state.getBook().askPosn();
-        int startSell = state.getBook().bidPosn();
+        int startBuy = state.getBook().askPosn()-1;
+        int startSell = state.getBook().bidPosn()+1;
         int m = nrOrds.length / 2;
 
         for (int i = 0; i < m; i++) {
             if (nrOrds[i] > 0) {
                 if((startBuy - i) >= 0) {
-                    state.getBook().getBuys().set(startBuy - i , state.getBook().getBuys().get(startBuy - i ) + 1);    
+                    state.getBook().getBuys().set(startBuy - i , state.getBook().getBuys().get(startBuy - i ) + 1);
+                    if((startBuy - i)==state.getBook().getBidPosn()) {
+                        state.getBook().setBidPosn((startBuy - i) + 1);
+                    }
                 }
                 
             }
@@ -96,7 +99,9 @@ public class CallableTothSimulator implements Callable<RunState> {
                 if((startSell + i) <= state.getBook().getnL()) {
                     state.getBook().getSells()
                     .set(startSell + i, state.getBook().getSells().get(startSell + i) + 1);
-                    
+                    if((startSell + i)==state.getBook().getAskPosn()) {
+                        state.getBook().setAskPosn((startSell + i) - 1);
+                    }
                 }
             }
 
@@ -122,13 +127,17 @@ public class CallableTothSimulator implements Callable<RunState> {
     private void cancelBuyOrder(RunState state) {
         UniformIntegerDistribution uid = new UniformIntegerDistribution(1, state.getBook().getNrBuys());
         int q = uid.sample();
-        int b = state.getBook().askPosn();
+        int b = state.getBook().askPosn()-1;
         int size = 0;
         for(int i=0; i<state.getRunParams().getL(); i++) {
             size += state.getBook().getBuys().get(b - i);
             if(size >= q) {
                 state.getBook().getBuys().set(b-i,state.getBook().getBuys().get(b - i) - 1);
                 //System.out.println("Cancel Buy to: " + state.getBook().getBuys().get(b-i));
+                
+                if(state.getBook().getBuys().get(b - i) <= 0) {
+                    state.getBook().setBidPosn(state.getBook().getBidPosn() -1);
+                }
                 return;
             }
         }
@@ -138,13 +147,16 @@ public class CallableTothSimulator implements Callable<RunState> {
     private void cancelSellOrder(RunState state) {
         UniformIntegerDistribution uid = new UniformIntegerDistribution(1, state.getBook().getNrSells());
         int q = uid.sample();
-        int b = state.getBook().bidPosn();
+        int b = state.getBook().bidPosn()+1;
         int size = 0;
         for(int i=0; i<state.getRunParams().getL(); i++) {
             size += state.getBook().getSells().get(b + i);
             if(size >= q) {
                 state.getBook().getSells().set(b+i,state.getBook().getSells().get(b + i) - 1);
                 //System.out.println("Cancel Sell to: " + state.getBook().getSells().get(b+i));
+                if(state.getBook().getSells().get(b + i) <= 0) {
+                    state.getBook().setAskPosn(state.getBook().getAskPosn() +1);
+                }                
                 return;
             }
         }
@@ -169,13 +181,38 @@ public class CallableTothSimulator implements Callable<RunState> {
     }
 
     private void marketBuyOrder(RunState state) {
-        int askPosn = state.getBook().askPosn();
+        int askPosn = 0;
+        //if(state.getBook().getAskPosn() <=0) {
+            askPosn = state.getBook().askPosn();
+            //state.getBook().setAskPosn(askPosn);
+        //} else {
+            //askPosn = state.getBook().getAskPosn();
+        //}
+//        System.out.println("Current Ask Posn: " + askPosn);
         state.getBook().getSells().set(askPosn, (int)Math.round(state.getBook().getSells().get(askPosn)*(1 - getFraction(state))));
+        if(state.getBook().getSells().get(askPosn) <= 0) {
+            //the ask has moved!
+            state.getBook().setAskPosn(askPosn +1); 
+//            System.out.println("Ask Posn moved: " + askPosn);
+        }
     }
 
     private void marketSellOrder(RunState state) {
-        int bidPosn = state.getBook().bidPosn();
+        int bidPosn = 0;
+//        if(state.getBook().getBidPosn() <=0) {
+            bidPosn = state.getBook().bidPosn();
+//            state.getBook().setBidPosn(bidPosn);
+            
+//        } else {
+//            bidPosn = state.getBook().getBidPosn();
+//        }
+//        System.out.println("Current Bid Posn: " + bidPosn);
         state.getBook().getBuys().set(bidPosn, (int)Math.round(state.getBook().getBuys().get(bidPosn)*(1 - getFraction(state))));
+        if(state.getBook().getBuys().get(bidPosn) <= 0) {
+            //bid has moved
+            state.getBook().setBidPosn(bidPosn -1);
+//            System.out.println("Bid Posn moved: " + bidPosn);
+        }
     }
 
 
