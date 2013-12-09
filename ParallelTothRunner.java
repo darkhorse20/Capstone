@@ -14,8 +14,18 @@ public class ParallelTothRunner {
      */
     @SuppressWarnings("unchecked")
     public static void main(String[] args) {
+        if(args.length < 4) {
+            System.out.println("Incorrect nr of params, run as: <jdk path>/java nrofsims nrofevents baspath");
+            System.exit(1);
+            
+        }
+        int nrSims = Integer.parseInt(args[0]);
+        int nrEvents = Integer.parseInt(args[1]);
+        int nrThrds = Integer.parseInt(args[2]);
+        String basePath = args[3];
+        
         long start = System.currentTimeMillis();
-        Parameters p = new Parameters();
+        Parameters p = new Parameters(nrSims, nrEvents, nrThrds, basePath);
         List<Book> books = new ArrayList<Book>();
         List<Double> aveMidPrxs = new ArrayList<Double>(p.getNumEvents());
         ExecutorService executor =Executors.newFixedThreadPool(p.getThreads());
@@ -31,7 +41,7 @@ public class ParallelTothRunner {
                 RunState state = futureList.get(i).get();
                 books.add(state.getBook());
                 Utils.aggregateListsDouble(aveMidPrxs, state.getMidPrxs());
-                System.out.println("Waiting for future : " + i + "done");
+                System.out.println("Waiting for future : " + i + " done");
                 
             } catch (InterruptedException e) {
                 throw new RuntimeException( e );
@@ -59,7 +69,7 @@ public class ParallelTothRunner {
         
         Utils.write(aveBookShape, p.getOutputFilePath() + "AveBookShape.csv");
         Utils.write(Utils.calcStdDev(allbooks), p.getOutputFilePath() + "BookShapes.csv");
-        
+        Utils.writeBooks(allbooks, p.getOutputFilePath() + "All.csv");
         
         
         System.out.println("Done");
