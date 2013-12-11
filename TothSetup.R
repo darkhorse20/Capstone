@@ -4,7 +4,7 @@
 setwd("./")
 
 #Book setup
-L <- 40 #Set number of price levels to be included in iterations
+L <- 100 #Set number of price levels to be included in iterations
 
 # Generate initial book
 LL <- 1 #Total number of levels in buy and sell books
@@ -18,7 +18,7 @@ initializeBook5 <- function(book)
 {
   
   #   Price <- -LL:LL
-  Price <- round(seq(0,LL,0.0100000), digits=3)
+  Price <- round(seq(0,LL,0.0100000), digits=2)
   n_L <- LL/0.01
   cat('No of levels: ', n_L)
   # Book shape is set to equal long-term average from simulation
@@ -79,7 +79,7 @@ calculateFracVolume <- function()
 #Buy limit order
 limitBuyOrder <- function(book, price=NA){
   if (is.na(price))
-  {prx <- (bestOffer(book)-round(pick(L)*0.01,digits=3))}
+  {prx <- (bestOffer(book)-round(pick(L)*0.01,digits=2))}
   else prx <-price  
   #   if(logging==T){eventLog[count,]<- c("LB",prx)} 
   book$buySize[book$Price==prx]<-book$buySize[book$Price==prx]+1} 
@@ -87,7 +87,7 @@ limitBuyOrder <- function(book, price=NA){
 #Sell limit order
 limitSellOrder <- function(book, price=NA){
   if (is.na(price))
-  {prx <- (bestBid(book)+round(pick(L)*0.01,digits=3))}
+  {prx <- (bestBid(book)+round(pick(L)*0.01,digits=2))}
   else prx <-price  
   #   if(logging==T){eventLog[count,] <- c("LS",prx)}  
   book$sellSize[book$Price==prx]<-book$sellSize[book$Price==prx]+1} 
@@ -187,23 +187,25 @@ marketSellOrder <- function(book, curr_L){
 
 
 ## calculate the market buy/sell probability based on powerlaw distribution
-marketOrder <- function(book, curr_L, curr_b_s){
+marketOrder <- function(book, curr_L, curr_b_s, bs_flips, mo_cnt){
   
   if(curr_L <= 0) {
-#     curr_b_s <- rbinom(1,1, c(0.5,0.5));
-#     if(curr_b_s ==1) curr_b_s <- 2
-#     else curr_b_s <- 1
+    #     curr_b_s <- rbinom(1,1, c(0.5,0.5));
+    #     if(curr_b_s ==1) curr_b_s <- 2
+    #     else curr_b_s <- 1
     #curr_b_s <- sample(1:2,1, replace = TRUE, c(0.5,0.5)); 
-    curr_b_s <- sample(1:2,1); 
-#     u <- runif(1,0.0,1.0)
+    #     curr_b_s <- sample(1:2,1); 
+    curr_b_s <- bs_flips[mo_cnt]
+    
+    #     u <- runif(1,0.0,1.0)
     u <- runif(1)
     curr_L <- round(exp(-log(u)/(alpha+1)))
-
+    
     
   }
   # doing this to look like sample's output
-#   if(curr_b_s == 0) curr_b_s <- 1
-#   else curr_b_s <-2
+  #   if(curr_b_s == 0) curr_b_s <- 1
+  #   else curr_b_s <-2
   
   cat('Current L:', curr_L, 'Buy-Sell', curr_b_s ,'\n')
   
@@ -256,8 +258,8 @@ generateEvent <- function()
 
 generateEventZIModified <- function()
 {
-  nb <- sum(book$buySize[book$Price>=(bestOffer()-round(L*0.01, digits=3))]); # Number of cancelable buy orders
-  ns <- sum(book$sellSize[book$Price<=(bestBid()+round(L*0.01, digits=3))]); # Number of cancelable sell orders
+  nb <- sum(book$buySize[book$Price>=(bestOffer()-round(L*0.01, digits=2))]); # Number of cancelable buy orders
+  ns <- sum(book$sellSize[book$Price<=(bestBid()+round(L*0.01, digits=2))]); # Number of cancelable sell orders
   eventRate <- nb*nu+ns*nu + mu +2*L*lamb_da;
   probEvent <- c(L*lamb_da,L*lamb_da,nb*nu,ns*nu,mu)/eventRate;
   m <- sample(1:5, 1, replace = TRUE, probEvent); #Choose event type
@@ -271,11 +273,11 @@ generateEventZIModified <- function()
   
 }
 
-generateTothEvent <- function(book, curr_L, curr_b_s)
+generateTothEvent <- function(book, curr_L, curr_b_s, bs_flips, mo_cnt)
 {
   withAgent <- FALSE 
-  nb <- sum(book$buySize[book$Price>=(bestOffer(book)-round(L*0.01, digits=3))]); # Number of cancelable buy orders
-  ns <- sum(book$sellSize[book$Price<=(bestBid(book)+round(L*0.01, digits=3))]); # Number of cancelable sell orders
+  nb <- sum(book$buySize[book$Price>=(bestOffer(book)-round(L*0.01, digits=2))]); # Number of cancelable buy orders
+  ns <- sum(book$sellSize[book$Price<=(bestBid(book)+round(L*0.01, digits=2))]); # Number of cancelable sell orders
   eventRate <- nb*nu+ns*nu + mu +2*L*lamb_da;
   
   limOrds <- rpois(2*L, lambda = lamb_da)
@@ -284,7 +286,10 @@ generateTothEvent <- function(book, curr_L, curr_b_s)
   
   
   mktOrd <- rpois(1, lambda = mu)
+  
   if(mktOrd >0) {
+    
+    mo_cnt <- mo_cnt + 1
     
     ## Agent ORder ##
     if(withAgent == TRUE) {
@@ -295,18 +300,18 @@ generateTothEvent <- function(book, curr_L, curr_b_s)
         }
         switch (m,
                 newAgentOrder(),
-                res <- marketOrder(book, curr_L, curr_b_s)
+                res <- marketOrder(book, curr_L, curr_b_s, bs_flips, mo_cnt)
                 
                 
         );
         
       } else {
-        res <- marketOrder(book, curr_L, curr_b_s)
+        res <- marketOrder(book, curr_L, curr_b_s, bs_flips, mo_cnt)
         
       }
       
     } else {
-      res <- marketOrder(book, curr_L, curr_b_s)
+      res <- marketOrder(book, curr_L, curr_b_s, bs_flips, mo_cnt)
     }
     
     book <- res$Book
@@ -320,7 +325,7 @@ generateTothEvent <- function(book, curr_L, curr_b_s)
   
   #Get the midPR after this time step
   
-  return (list(Book=book, CL=curr_L, BS=curr_b_s))
+  return (list(Book=book, CL=curr_L, BS=curr_b_s, MOCNT=mo_cnt))
   
 }
 
