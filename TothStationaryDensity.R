@@ -4,10 +4,10 @@ source('RvEstimators.R')
 source('TothSetup.R')
 runPar <- TRUE
 
-nu <- 0.0001; mu<- 0.1; lamb_da <- 0.5; gamma <- 0.8; 
+nu <- 0.0001; mu<- 0.5; lamb_da <- 0.5; gamma <- 0.8; 
 eventRate <- 1
 phi <- 0.05
-zeta_g <- 0.2;
+zeta_g <- 0.65;
 # frac_g <- 1.0;
 band <- 300
 burnin <- 0
@@ -20,16 +20,16 @@ agentDone <- FALSE
 withAgent <- FALSE
 # set.seed(9062013)
 #set.seed(9)
-numSims <- 16
-numCores <- 16
+numSims <- 8
+numCores <- 8
 # Generate initial book
 LL <- 10 #Total number of levels in buy and sell books
 
 #Book setup
-L <- 40 #40Set number of price levels to be included in iterations
+L <- 100 #40Set number of price levels to be included in iterations
 scale <- 0.01
 
-numEvents <- 5000;
+numEvents <- 10000;
 bookState <- as.data.frame(matrix(0,nrow=2*band+1, ncol=1));
 aveBook <- as.data.frame(matrix(0,nrow=(round(LL/scale) + 1), ncol=3));
 allMidPrxs <- c(rep(0, numEvents))
@@ -42,8 +42,22 @@ runBooksSimulation <- function(.) {
   n_L <- LL/scale
   cat('No of levels: ', n_L)
   # Book shape is set to equal long-term average from simulation
-  buySize <- c(rep(5000,(n_L/2)-8),4000,3500,3000,2500,2000,1500,1000,500,rep(0,(n_L/2)+1))
-  sellSize <- c(rep(0,(n_L/2)),0,500,1000,1500,2000,2500,3000,3500,4000,rep(5000,(n_L/2)-8))
+  #   buySize <- c(rep(5000,(n_L/2)-20),4750,4500,4250,4000,3750,3500,3250,3000,2750,2500,
+  #               2250,2000,1750,1500,1250,1000,750,500,250,50,
+  #               rep(0,(n_L/2)+1))
+  #   sellSize <- c(rep(0,(n_L/2)),0,50,250,500,750,1000,1250,1500,1750,2000,
+  #                2250,2500,2750,3000,3250,3500,3750,4000,4250,4500,4750,rep(5000,(n_L/2)-20))
+  
+  #   buySize <- c(rep(5000,(n_L/2)-20),475,450,425,400,375,350,325,300,275,25,
+  #                22,20,17,15,12,10,7,5,20,5,
+  #                rep(0,(n_L/2)+1))
+  #   sellSize <- c(rep(0,(n_L/2)),0,5,25,5,7,10,12,15,17,20,
+  #                 22,25,27,30,325,350,375,400,425,450,475,rep(5000,(n_L/2)-20))
+  
+  buySize <- c(rep(5000,(n_L/2)-100), seq(5000,50,-50),
+               rep(0,(n_L/2)+1))
+  sellSize <- c(rep(0,(n_L/2)),seq(0,5000,50), rep(5000,(n_L/2)-100))
+  
   book <- data.frame(Price, buySize, sellSize ) 
   count <- 0
   eventType <- c("LB","LS","CB","CS","MB","MS")
@@ -52,14 +66,17 @@ runBooksSimulation <- function(.) {
   fracArr <- c(rep(0, numEvents))
   curr_L <- 0
   curr_b_s <- 1
-  set.seed(round(runif(1,min=1, max=10000000)))
+  # set.seed(round(runif(1,min=1, max=10000000)))
+  bs_flips <- sample(1:2, numEvents*mu*1.5, replace=TRUE)
+  mo_cnt <- 1
   
   for(count in 1:numEvents){
     #generateEvent()
-    ret_values <- generateTothEvent(book, curr_L, curr_b_s)
+    ret_values <- generateTothEvent(book, curr_L, curr_b_s, bs_flips, mo_cnt)
     book <- ret_values$Book
     curr_L <- ret_values$CL
     curr_b_s <- ret_values$BS
+    mo_cnt <- ret_values$MOCNT
     
     #generateEventZIModified();
     midPrxs[count] <- mid(book) 
@@ -92,22 +109,28 @@ monteCarlo <- function(sims, cores=detectCores()){
     # mclapply() for everybody else
   } else {
     runtime <- system.time({
-      res <- mclapply(X=1:sims, FUN=runBooksSimulation, mc.cores=cores)
+      res <- mclapply(X=1:sims, FUN=runBooksSimulation, mc.cores=cores, mc.set.seed = TRUE, mc.cleanup=TRUE)
     })[3]
   }
   return(res)
 }
 
 if(runPar == FALSE) {
+  numSims <- 1
   mc_res <- runBooksSimulation()
-  plot(mc_res$MP)
+  aveBookShape <- dynamicBookShape(mc_res$Book, band)
+  aveMidPrxs <- mc_res$MP
+  
+  plot(aveBookShape, col="red",type="l",xlab="Price",ylab="Quantity", main="Average Book Shape")
+  
+  plot(aveMidPrxs)
   
 } else {
   
   mc_res <- monteCarlo(numSims, numCores)
   
   for(k in 1:length(mc_res)) {
-   bookState <<- bookState + dynamicBookShape(mc_res[[k]]$Book, band)
+    bookState <<- bookState + dynamicBookShape(mc_res[[k]]$Book, band)
     aveBook <- aveBook + mc_res[[k]]$Book
     allMidPrxs <- allMidPrxs + mc_res[[k]]$MP
     
@@ -122,9 +145,8 @@ if(runPar == FALSE) {
   
   plot(aveMidPrxs)
   
+  
 }
-
-
 
 
 cat('Done with simulations: ',numSims,'\n')
@@ -149,18 +171,19 @@ cat('Done with simulations: ',numSims,'\n')
 # End of time series generation
 ########################################################################################
 
-rv <- ZHOU(aveMidPrxs, 5)
+#aveMidPrxs <- aveMidPrxs[1000:6000]
+rv <- ZHOU(aveMidPrxs, 1)
 # rv <-TSRV(midPrxs, 1)
 # 
- cat('Realized Vol: ', rv)
+cat('Realized Vol: ', rv)
 # 
- u_star <- sqrt(rv/(2*nu))
- cat('U_star is :', u_star)
+u_star <- sqrt(rv/(2*nu))
+cat('U_star is :', u_star)
 
 ########################################
 # Plot book density comparison
 ########################################
-u_values <- seq(0.0,3.0,0.1)
+u_values <- seq(0.0,3.0,0.01)
 rho_inf <- lamb_da/nu
 
 
@@ -176,9 +199,21 @@ getEmpBookDensityRatioSellSide <- function(indx) {
   return(aveBookShape[band + indx*100]/rho_inf)
 }
 
-plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatio), type="l", col="blue", main="Book Density Comparison")
-par(new = 'T')
-plot(u_values, sapply(u_values,FUN=getAnalyticBookDensityRatio), type="p", col="red", main="Book Density Comparison")
-par(new = 'T')
-plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatioSellSide), type="l", col="green", main="Book Density Comparison")
+u_tgt <- 0.49
+getTargetRatio <- function(u) {
+  return( 1 - exp(-(u/u_tgt)))
+}
 
+plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatio), type="l", col="blue", 
+     main="Book Density Comparison", ylim=c(0.0,1.0), ylab="rho/rho_inf")
+par(new = 'T')
+plot(u_values, sapply(u_values,FUN=getAnalyticBookDensityRatio), type="p", col="red", 
+     main="Book Density Comparison", ylim=c(0.0,1.0), ylab="rho/rho_inf")
+par(new = 'T')
+plot(u_values, sapply(u_values,FUN=getEmpBookDensityRatioSellSide), type="l", col="green", 
+     main="Book Density Comparison", ylim=c(0.0,1.0), ylab="rho/rho_inf")
+par(new = 'T')
+plot(u_values, sapply(u_values,FUN=getTargetRatio), type="p", col="yellow", 
+     main="Book Density Comparison", ylim=c(0.0,1.0), ylab="rho/rho_inf")
+
+par(new = 'F')
